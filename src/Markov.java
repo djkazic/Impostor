@@ -13,6 +13,7 @@ public class Markov {
 
 	private static HashMap<String, ArrayList<String>> data; //Mapping / grab-bag model for chaining
 	private static ArrayList<String> input;                 //Container for word-basis plain text
+	private static File inputFile;                          //Input file pointer
 
 	/**
 	 * Main point of entry in program; prompts user for number of chains to generate
@@ -20,26 +21,33 @@ public class Markov {
 	public static void main(String[] args) {
 		System.out.println("==== Markov Chain Generator v0.1 ====");
 		
-		//Prompt user to input chain count
-		Scanner countScan = new Scanner(System.in);
-		System.out.println("Enter the number of chains to generate from input: ");
-		int iterations = -1;
-		if(countScan.hasNextInt()) {
-			iterations = countScan.nextInt();
-		} else {
-			System.out.println("Invalid input.");
+		inputFile = new File("input.txt");
+		if(inputFile.exists()) {
+			System.out.println("Loading input file...");
 			System.out.println();
-			main(args);
-		}
-		countScan.close();
-		
-		//Initialize and begin chain generation
-		if(iterations != -1) {
-			initialize();
-			for(int i=0; i < iterations; i++) {
-				generateChain(i);
+			
+			//Prompt user to input chain count
+			Scanner countScan = new Scanner(System.in);
+			System.out.print("Enter the number of chains to generate from input: ");
+			int iterations = -1;
+			if(countScan.hasNextInt()) {
+				iterations = countScan.nextInt();
+			} else {
+				System.out.println("Invalid input.");
 				System.out.println();
+				main(args);
 			}
+			countScan.close();
+			
+			//Initialize and begin chain generation
+			if(iterations != -1) {
+				initialize();
+				for(int i=0; i < iterations; i++) {
+					generateChain(i);
+				}
+			}
+		} else {
+			System.out.println("No input file found: input.txt");
 		}
 	}
 	
@@ -52,7 +60,7 @@ public class Markov {
 
 		//Read words from a plain text file, word by word
 		try {
-			Scanner scanOne = new Scanner(new File("input.txt"));
+			Scanner scanOne = new Scanner(inputFile);
 			while(scanOne.hasNextLine()) {
 				Scanner scanTwo = new Scanner(scanOne.nextLine());
 				while(scanTwo.hasNext()) {
