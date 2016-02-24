@@ -1,3 +1,5 @@
+package org.alopex.Impostor;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +15,6 @@ public class Markov {
 
 	private static HashMap<String, ArrayList<String>> data; //Mapping / grab-bag model for chaining
 	private static ArrayList<String> input;                 //Container for word-basis plain text
-	private static File inputFile;                          //Input file pointer
 
 	/**
 	 * Main point of entry in program; prompts user for number of chains to generate
@@ -21,46 +22,88 @@ public class Markov {
 	public static void main(String[] args) {
 		System.out.println("==== Markov Chain Generator v0.1 ====");
 		
-		inputFile = new File("input.txt");
-		if(inputFile.exists()) {
-			System.out.println("Loading input file...");
+		//Prompt user to input chain count
+		Scanner countScan = new Scanner(System.in);
+		System.out.print("Enter the number of chains to generate from input: ");
+		int iterations = -1;
+		if(countScan.hasNextInt()) {
+			iterations = countScan.nextInt();
+		} else {
+			System.out.println("Invalid input.");
 			System.out.println();
+			main(args);
+		}
+		
+		File inputFile = new File("input.txt");
+		String inputStr = "";
+		boolean fileFound = false;
+		
+		if(inputFile.exists()) {
+			System.out.println("Loading corpus from input file...");
+			System.out.println();
+			fileFound = true;
+		} else {
+			System.out.println("No input file found; falling back to web mode");
 			
-			//Prompt user to input chain count
-			Scanner countScan = new Scanner(System.in);
-			System.out.print("Enter the number of chains to generate from input: ");
-			int iterations = -1;
-			if(countScan.hasNextInt()) {
-				iterations = countScan.nextInt();
-			} else {
-				System.out.println("Invalid input.");
-				System.out.println();
-				main(args);
+			if(countScan.hasNext()) {
+				String webQuery = countScan.next();
+				System.out.println("Locking query to " + webQuery);
+				inputStr = Filter.getText("http://en.wikipedia.org/wiki/" + webQuery);
+				countScan.close();
 			}
-			countScan.close();
-			
+		}
+		
+		if(inputFile != null || inputStr != null) {
 			//Initialize and begin chain generation
 			if(iterations != -1) {
-				initialize();
+				if(fileFound) {
+					initialize(inputFile);
+				} else {
+					initialize(inputStr);
+				}
 				for(int i=0; i < iterations; i++) {
 					generateChain(i);
 				}
 			}
-		} else {
-			System.out.println("No input file found: input.txt");
 		}
 	}
 	
 	/**
 	 * Initializes the input ArrayList container prior to looped chain generation
 	 */
-	private static void initialize() {
+	private static void initialize(File inputFile) {
 		//Initialize local variable for storing words
 		input = new ArrayList<String> ();
 
 		//Read words from a plain text file, word by word
 		try {
 			Scanner scanOne = new Scanner(inputFile);
+			while(scanOne.hasNextLine()) {
+				Scanner scanTwo = new Scanner(scanOne.nextLine());
+				while(scanTwo.hasNext()) {
+					String proposedInput = scanTwo.next();
+					if(!proposedInput.startsWith("//")) {
+						input.add(proposedInput);
+					}
+				}
+				scanTwo.close();
+			}
+			scanOne.close();
+		} catch(Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Initializes the input ArrayList container prior to looped chain generation
+	 */
+	private static void initialize(String inputString) {
+		//Initialize local variable for storing words
+		input = new ArrayList<String> ();
+
+		//Read words from a plain text file, word by word
+		try {
+			Scanner scanOne = new Scanner(inputString);
 			while(scanOne.hasNextLine()) {
 				Scanner scanTwo = new Scanner(scanOne.nextLine());
 				while(scanTwo.hasNext()) {
@@ -94,8 +137,8 @@ public class Markov {
 		
 		//For each word, bin each word at a depth of 1
 		for(int i=0; i < input.size() - 2; i++) {
-			String thisWord = input.get(i);
-			String nextWord = input.get(i + 1);
+			String thisWord = input.get(i).trim();
+			String nextWord = input.get(i + 1).trim();
 			
 			ArrayList<String> newEntry = null;
 			
@@ -146,7 +189,11 @@ public class Markov {
 				String chosenPotential = UNIQUE_MODE ? 
 										 potentialNexts.remove(new Random().nextInt(potentialNexts.size())) 
 										  : potentialNexts.get(new Random().nextInt(potentialNexts.size()));
-				output.add(chosenPotential);
+				if(chosenPotential.equals(" ")) {
+					counter--;
+				} else {
+					output.add(chosenPotential);
+				}
 				
 				//Set next suggestedKey as the chosen string
 				suggestedKey = chosenPotential;
